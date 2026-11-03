@@ -628,6 +628,45 @@ body.rocket{
 .dark-mutate canvas{width:256px;height:256px;image-rendering:pixelated}
 .dark-mutate.flash::after{content:"";position:absolute;inset:-20px;background:#fff;animation:mutFlash .52s ease-out both}
 @keyframes mutFlash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+.dark-pair{display:flex;justify-content:center;gap:12px;width:100%}
+.dark-pair-one{margin:0;text-align:center;transition:transform .7s ease-in,opacity .7s ease-in}
+.dark-pair-one canvas{width:150px;height:150px;image-rendering:pixelated}
+.dark-pair-one figcaption{font:11px Silkscreen,monospace;letter-spacing:.06em;color:#c3b2d8;margin-top:4px}
+.dark-pair.merge .left{transform:translateX(55%);opacity:.2}
+.dark-pair.merge .right{transform:translateX(-55%);opacity:.2}
+@media(max-width:360px){.dark-pair-one canvas{width:120px;height:120px}}
+
+/* Block 2b: the Game Boy battle, Battle/Run, blasting off */
+body.rocket .gbfight{background:#d9cceb}
+body.rocket .gbfight .fhp,body.rocket .gbfight .fdlg{background:#ece2f7;color:#21162f;box-shadow:0 0 0 2px #21162f}
+body.rocket .gbfight .fhp b,body.rocket .gbfight .fhp b em{color:#21162f}
+body.rocket .gbfight .fhp .g{background:#cbbbe0}
+.dark-battle.dark-screen{padding:12px 8px 40px}
+.gbfight .fdlg{position:relative;left:auto;right:auto;bottom:auto;margin:10px;font-size:11px;line-height:1.7;min-height:5.6em}
+.gbfight .fmon.foe{right:5%;top:2%;height:48%}
+.gbfight .fmon.you{left:6%;bottom:-2%;top:auto;height:54%}
+.gbfight .fhp.you{bottom:auto;top:52%;right:10px}
+.gbfight .fhp.foe{top:10px;left:10px}
+.gbfight .field{position:relative}
+.dark-battle .fmgrid{grid-template-columns:1fr 1fr;gap:8px}
+.dark-battle .fmove{display:grid;grid-template-columns:auto 1fr;gap:6px 8px;align-items:center;padding:10px;margin:0;font-size:9.5px}
+.dark-battle .fmove small{grid-column:1/-1;font:12px/1.4 "Jost",Futura,system-ui,sans-serif;color:#cbbbe0;text-transform:none;letter-spacing:0}
+.dark-choice{text-align:center}.dark-choice h1{color:#ff6372;font:clamp(22px,6vw,44px) Silkscreen,monospace}.dark-choice>.dark-sprite{margin:0 auto}
+.dark-foe canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
+.dark-battle .fmenu .fmove{color:#ece2f7;background:#2d1f40}
+body.rocket .dark-battle .fmove .k{background:#5b3f80;color:#ece2f7}
+body.rocket .dark-battle .fmove.chosen{background:#4a3366}
+body.rocket .dark-battle .fmlab{color:#b9a6d3}
+.dark-gbmenu{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px auto 0;max-width:340px}
+.dark-gbmenu .fmove{justify-content:center;font-family:"Silkscreen",monospace;font-size:13px;padding:14px;color:#ece2f7;background:#2d1f40;border:2px solid #b9a6d3}
+.dark-gbmenu .fmove:hover{background:#4a3366}
+.rocket-sky{position:relative;height:150px;overflow:hidden}
+.rocket-duo.flying{position:absolute;left:50%;bottom:0;width:96px;margin-left:-48px;image-rendering:pixelated;animation:blastOff 1.6s steps(12) forwards}
+.rocket-twinkle{position:absolute;left:72%;top:8px;color:#fff;font-size:20px;opacity:0;animation:twinkle .9s 1.5s steps(2) 3 forwards}
+@keyframes blastOff{0%{transform:translate(0,0) scale(1) rotate(0)}100%{transform:translate(110px,-150px) scale(.08) rotate(540deg);opacity:0}}
+@keyframes twinkle{0%{opacity:0}50%{opacity:1}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.rocket-duo.flying{animation:none;opacity:0}.rocket-twinkle{animation:none;opacity:1}}
+.dark-page h2.dark-line{margin-top:22px}
 
 </style>
 
@@ -3988,7 +4027,8 @@ function fusionSecond(res,answers){
     for(var a=0;a<TRAIT_COUNT;a++){ var sil=!!(tags[4]&(1<<a)), g=sil?1:Math.abs(profile[a]-tags[a]); d+=g; worst=Math.max(worst,g); if(sil)silent++; }
     return {f:f,d:d,w:worst,s:silent}; })
     .sort(function(x,y){return (x.d-y.d)||(x.w-y.w)||(x.s-y.s)||(x.f.id-y.f.id);});
-  var best=ranked.filter(function(r){return r.d===ranked[0].d&&r.w===ranked[0].w&&r.s===ranked[0].s;});
+  // every family at the closest distance is in the draw, so all 541 families can be someone's second (reach proof, Nov 3)
+  var best=ranked.filter(function(r){return r.d===ranked[0].d;});
   var seed=answerHash(ans,ans.length)^answers.reduce(function(h,a,i){return Math.imul(h^(a.key.charCodeAt(0)+i*7),16777619);},2166136261);
   var fam=best[hsh2(seed>>>0)%best.length].f;
   var same=fam.mon.filter(function(m){return positionOf(m)===pool;}), mon=(same.length?same:fam.mon)[0];
@@ -4037,14 +4077,15 @@ function darkSprite(res,host,klass){
 }
 function darkSummary(b,nature){if(!b||!b.rounds)return "";var rows=b.rounds,risk=rows.filter(function(x){return x.move==="RISK";}).length;
   if(risk>=2)return "You used its own move against it "+risk+" times. That cost you "+(risk*6)+" HP.";
-  var read=rows.filter(function(x){return x.read;}).length;
+  var read=rows.filter(function(x){return x.read&&x.res!=="L";}).length;
+  if(!read)return "You didn't read any of its "+rows.length+" tells.";
   if(read>=4&&b.result==="LOSS")return "You read "+read+" of "+rows.length+" tells. It bluffed when it counted.";
   var ct={PRESS:0,REDIRECT:0,GUARD:0,RISK:0};rows.forEach(function(x){ct[x.move]++;});
   var most=DarkBattle.MOVES.slice().sort(function(a,b){return ct[b]-ct[a];})[0];
   return "You read "+read+" of "+rows.length+" tells, mostly with "+DARK_SPEC.moves[most].names[nature]+".";
 }
 function darkNormal(res,host){var n=darkNode("div","dark-normal");spriteOn(n,res.mon.i);host.appendChild(n);return n;}
-function darkReturn(){document.body.classList.remove("rocket");if(darkState&&darkState.answers.length===3){darkState.stage="page";saveLocal();}el("reader").hidden=true;el("index").hidden=false;el("index").scrollIntoView({behavior:"smooth",block:"start"});}
+function darkReturn(){document.body.classList.remove("rocket");if(darkState&&darkState.answers.length===3){darkState.stage=(darkState.battle||darkState.ran)?"report":"choice";saveLocal();}el("reader").hidden=true;el("index").hidden=false;el("index").scrollIntoView({behavior:"smooth",block:"start"});}
 function darkChapter(host,res){
   if(darkTimer){clearInterval(darkTimer);darkTimer=null;}
   if(!darkState||darkState.dex!==res.mon.i)darkState={dex:res.mon.i,answers:[],noTimer:false,stage:"intro"};
@@ -4056,11 +4097,13 @@ function darkChapter(host,res){
   function setStage(s){state.stage=s;saveLocal();host.innerHTML="";render();}
   function render(){
     title="Dark "+dname();
-    if(state.answers.length===3 && (state.stage==="intro"||state.stage==="test"))state.stage="page";
+    if(state.answers.length===3 && (state.stage==="intro"||state.stage==="test"))state.stage="choice";
+    if(state.stage==="page")state.stage=(state.battle||state.ran)?"report":"choice";   // readings saved before Block 2
     if(state.stage==="intro")intro();
     else if(state.stage==="test")question();
     else if(state.stage==="reveal")reveal();
-    else if(state.stage==="page")page();
+    else if(state.stage==="choice")choice();
+    else if(state.stage==="report")report();
     else if(state.stage==="battle")battleStart();
     else if(state.stage==="win"||state.stage==="loss")ending(state.stage==="win",state.battle||null);
   }
@@ -4114,7 +4157,7 @@ function darkChapter(host,res){
     var duo=document.createElement("img");duo.className="rocket-duo small";duo.src=ROCKET_DUO;duo.alt="Team Rocket";wrap.appendChild(duo);
     darkText(wrap,"p","dark-dialogue","Run it.");
     var stageBox=darkNode("div","dark-mutate");wrap.appendChild(stageBox);
-    var said=darkText(wrap,"p","dark-dialogue","What? "+name+" is mutating!");
+    var said=darkText(wrap,"p","dark-dialogue","");
     var after=darkNode("div","dark-after");wrap.appendChild(after);after.hidden=true;
     function finish(){
       said.textContent=name+" mutated into DARK "+fname.toUpperCase()+"!";
@@ -4124,17 +4167,28 @@ function darkChapter(host,res){
       var l=DARK_LORE[String(res.mon.i)], lead=DarkReading.leadOf(state.answers);
       if(l){ var line=(lead==="insult"?l.insultDark:l.overDark)||""; darkText(after,"p","dark-dialogue",line.split("Dark "+name).join("Dark "+fname)); }
       darkText(after,"p","dark-dialogue","Don't look so surprised. It was always in there. We just turned it up.");
-      darkButton(after,"See what it is",function(){setStage("page");});
+      darkButton(after,"See what it is",function(){setStage("choice");});
     }
     if(!darkSheetPromise){darkSheetPromise=new Promise(function(resolve,reject){var im=new Image();im.onload=function(){darkSheet=im;resolve(im);};im.onerror=reject;im.src="sheet.png";});}
     darkSheetPromise.then(function(im){
       var P=DARK_PAD, plain=document.createElement("canvas");plain.width=CELL+2*P;plain.height=CELL+2*P;
       plain.getContext("2d").drawImage(im,((res.mon.i-1)%COLS)*CELL,Math.floor((res.mon.i-1)/COLS)*CELL,CELL,CELL,P,P,CELL,CELL);
       var mid=fusionPlainCanvas(im,res.mon,B), last=fusionDarkCanvas(im,res.mon,B,res.lanePhase);
-      var cv=document.createElement("canvas");cv.width=plain.width;cv.height=plain.height;stageBox.appendChild(cv);
+      var other=document.createElement("canvas");other.width=plain.width;other.height=plain.height;
+      other.getContext("2d").drawImage(im,((B.i-1)%COLS)*CELL,Math.floor((B.i-1)/COLS)*CELL,CELL,CELL,P,P,CELL,CELL);
+      // first: both Pokémon that make the shadow, side by side (Charlotte, Nov 3)
+      var pair=darkNode("div","dark-pair");stageBox.appendChild(pair);
+      [[plain,name],[other,pretty(B.n)]].forEach(function(it,k){var f=darkNode("figure","dark-pair-one"+(k?" right":" left"));
+        var c=document.createElement("canvas");c.width=it[0].width;c.height=it[0].height;c.getContext("2d").drawImage(it[0],0,0);
+        f.appendChild(c);f.appendChild(darkNode("figcaption",null,it[1].toUpperCase()));pair.appendChild(f);});
+      var cv=document.createElement("canvas");cv.width=plain.width;cv.height=plain.height;cv.className="dark-merge";cv.hidden=true;stageBox.appendChild(cv);
       var x=cv.getContext("2d");x.imageSmoothingEnabled=false;
       function show(c){x.clearRect(0,0,cv.width,cv.height);x.drawImage(c,0,0);}
-      if(matchMedia("(prefers-reduced-motion: reduce)").matches){show(last);finish();return;}
+      if(matchMedia("(prefers-reduced-motion: reduce)").matches){pair.remove();cv.hidden=false;show(last);finish();return;}
+      setTimeout(function(){ if(!stageBox.isConnected) return; pair.classList.add("merge");      // they slide into one
+        setTimeout(function(){ if(!stageBox.isConnected) return; pair.remove(); cv.hidden=false;
+          said.textContent="What? "+name+" is mutating!"; flicker(); },700); },1600);
+      function flicker(){
       // like a Game Boy evolution: flicker between the two forms, faster and faster, then a white flash
       var gap=420, on=false;
       (function tick(){ if(!stageBox.isConnected) return;
@@ -4142,18 +4196,45 @@ function darkChapter(host,res){
         if(gap>56) setTimeout(tick,gap);
         else { stageBox.classList.add("flash"); setTimeout(function(){show(last);stageBox.classList.remove("flash");finish();},520); }
       })();
+      }
     },function(){finish();});
   }
-  function page(){
-    var wrap=darkNode("section","dark-page dark-screen");host.appendChild(wrap);
-    var fname=dname();
+  /* Battle or Run (Load-Bearing 33: Run just skips the fight). */
+  function choice(){
+    var fname=dname(), wrap=darkNode("section","dark-choice dark-screen");host.appendChild(wrap);
     darkSprite(res,wrap);darkText(wrap,"h1",null,"DARK "+fname.toUpperCase());
+    darkText(wrap,"p","dark-dialogue","Want it back? Take it from it.");
+    var menu=darkNode("div","dark-gbmenu");wrap.appendChild(menu);
+    darkButton(menu,"BATTLE",function(){state.ran=false;setStage("battle");},"fmove");
+    darkButton(menu,"RUN",function(){state.ran=true;state.battle=null;track("battle","left");setStage("report");},"fmove");
+  }
+  /* The shadow report: a real read, after the fight or the run. */
+  function report(){
+    var B=second(), fname=dname(), wrap=darkNode("section","dark-page dark-screen");host.appendChild(wrap);
+    darkSprite(res,wrap);darkText(wrap,"h1",null,"DARK "+fname.toUpperCase());
+    darkText(wrap,"p","dark-kicker","YOUR SHADOW REPORT");
+    if(B){ var lead=DarkReading.leadOf(state.answers), tgt=fusionTargetPhase(res.lanePhase,lead);
+      var how={over:"you pushed past your own limits",both:"you pushed and fought back at once",insult:"you fought what was trying to shape you",
+        regulated:"you held your shape",deficient:"you handed it off"}[lead];
+      darkText(wrap,"h2","dark-line","Why "+pretty(B.n));
+      darkText(wrap,"p","dark-line",(state.noTimer?"In your answers, ":"Under the clock, ")+how+". That pulls toward "+PHASE_EN[tgt]+", and of "+PHASE_EN[tgt]+"'s Pokémon, "+pretty(B.n)+
+        " is the closest to how you are with other people. So Team Rocket grafted it onto your "+name+".");
+    }
     var reading=DarkReading.assemble(DARK_SPEC,DARK_LORE,res.mon.i,fname,res.lanePhase,state.answers,state.noTimer);
-    reading.lines.forEach(function(line){ line.text=String(line.text).split("Dark "+name).join("Dark "+fname);var tag=line.number===3?"h2":"p";
+    reading.lines.forEach(function(line){ line.text=String(line.text).split("Dark "+name).join("Dark "+fname);
+      var tag=line.number===3?"h2":"p";
       var n=darkText(wrap,tag,"dark-line dark-line-"+line.number,line.text);n.dataset.source=line.source;n.dataset.line=String(line.number);});
+    darkText(wrap,"h2","dark-line","How it went");
+    if(state.battle){ darkText(wrap,"p","dark-line",state.battle.result==="WIN"?"You beat "+title+".":title+" stays with Team Rocket.");
+      var sm=darkSummary(state.battle,nature); if(sm) darkText(wrap,"p","dark-line",sm); }
+    else darkText(wrap,"p","dark-line","You didn't fight it.");
+    if(B){ var T2=B.t[0], f=TYPE_FORCE[T2];
+      if(f){ darkText(wrap,"h2","dark-line","What to watch for");
+        darkText(wrap,"p","dark-line","Its signature attack comes from "+pretty(B.n)+": "+f.force+(state.battle?". In the fight it kept aiming that at you, because that's what gets through to you now.":". That's what it aims at you, because that's what gets through to you now."));
+        darkText(wrap,"p","dark-line",f.through); } }
     var actions=darkNode("div","dark-actions");wrap.appendChild(actions);
-    darkButton(actions,"Fight "+title,function(){setStage("battle");});
-    darkButton(actions,"Leave it with Team Rocket",function(){track("battle","left");state.battle=null;setStage("loss");},"ghost");
+    darkButton(actions,state.battle?"Fight again":"Battle it",function(){state.battle=null;state.ran=false;setStage("battle");});
+    darkButton(actions,"Back to my reading",darkReturn,"ghost");
   }
   function modifierLine(mod){var bits=[];
     if(mod.taken!==1){var typing=res.mon.t.map(cap).join("/");
@@ -4167,34 +4248,58 @@ function darkChapter(host,res){
     return bits.join("\n");
   }
   function battleStart(){
-    var mod=DarkBattle.modifiers(res.lanePhase,res.selectedType,res.mon.t),engine=DarkBattle.create(state.answers.map(function(a){return a.key;}),mod),wrap=darkNode("section","dark-battle dark-screen");wrap.dataset.nature=nature;host.appendChild(wrap);
-    darkText(wrap,"p","dark-dialogue","Want it back? Take it from it.");
-    if(!state.hasBattled){darkText(wrap,"p","dark-help",state.noTimer?"Before each round it shows what it's about to do. It doesn't always tell the truth. What it actually does leans toward how you answered.":"Before each round it shows what it's about to do. It doesn't always tell the truth. What it actually does leans toward what you did under the clock.");state.hasBattled=true;saveLocal();}
-    var arena=darkNode("div","dark-arena");wrap.appendChild(arena);darkNormal(res,arena);darkSprite(res,arena);
-    var hp=darkNode("div","dark-hp");wrap.appendChild(hp);var youSide=darkNode("div","dark-hp-side"),foeSide=darkNode("div","dark-hp-side");hp.appendChild(youSide);hp.appendChild(foeSide);var youHP=darkText(youSide,"b",null,"YOU 100"),foeHP=darkText(foeSide,"b",null,"DARK "+dname().toUpperCase()+" 100");var youTrack=darkNode("div","dark-hp-track"),foeTrack=darkNode("div","dark-hp-track");youSide.appendChild(youTrack);foeSide.appendChild(foeTrack);var youBar=darkNode("div","dark-hp-fill"),foeBar=darkNode("div","dark-hp-fill");youTrack.appendChild(youBar);foeTrack.appendChild(foeBar);
+    var SEGS=16;
+    var B=second(), fname=dname(), FOE="DARK "+fname.toUpperCase(), SIG=B&&TYPE_FORCE[B.t[0]]?TYPE_FORCE[B.t[0]].force:null;
+    var mod=DarkBattle.modifiers(res.lanePhase,res.selectedType,res.mon.t),engine=DarkBattle.create(state.answers.map(function(a){return a.key;}),mod);
+    var wrap=darkNode("section","dark-battle dark-screen");wrap.dataset.nature=nature;host.appendChild(wrap);
+    var fight=darkNode("div","fight gbfight");wrap.appendChild(fight);
+    var field=darkNode("div","field");fight.appendChild(field);
+    var cv=document.createElement("canvas");cv.width=320;cv.height=200;field.appendChild(cv);
+    (function(x){x.fillStyle="#d9cceb";x.fillRect(0,0,320,200);x.fillStyle="#b9a6d3";
+      x.beginPath();x.ellipse(232,78,58,11,0,0,7);x.fill();x.beginPath();x.ellipse(84,166,74,13,0,0,7);x.fill();
+      x.fillStyle="#cbbbe0";for(var i=0;i<320;i+=8)x.fillRect(i,108,4,1);})(cv.getContext("2d"));
+    var fm=darkNode("div","fmon foe dark-foe");field.appendChild(fm);
+    darkSheetPromise=darkSheetPromise||new Promise(function(resolve,reject){var im=new Image();im.onload=function(){darkSheet=im;resolve(im);};im.onerror=reject;im.src="sheet.png";});
+    darkSheetPromise.then(function(im){var c=B?fusionDarkCanvas(im,res.mon,B,res.lanePhase):darkSpriteCanvas(im,res.mon.i,res.lanePhase);fm.appendChild(c);});
+    var ym=darkNode("div","fmon you");spriteOn(ym,res.mon.i);field.appendChild(ym);
+    function hpBox(cls,label,tag){var b=darkNode("div","fhp "+cls),n=darkNode("b",null,label);n.appendChild(darkNode("em",null," "+tag));
+      var g=darkNode("div","g");for(var i=0;i<SEGS;i++)g.appendChild(document.createElement("i"));b.appendChild(n);b.appendChild(g);field.appendChild(b);return g;}
+    var foeBar=hpBox("foe",FOE,"DARK"),youBar=hpBox("you",name.toUpperCase(),PHASE_EN[res.lanePhase].toUpperCase());
+    var dlg=darkNode("div","fdlg");fight.appendChild(dlg);dlg.setAttribute("aria-live","polite");
+    function bar(g,v){var n=Math.max(0,Math.ceil(v/100*SEGS));Array.prototype.forEach.call(g.children,function(seg,i){seg.className=i>=n?"off":(n<=4?"crit":(n<=8?"low":""));});}
+    function draw(){bar(foeBar,engine.state.dark);bar(youBar,engine.state.you);}
+    var menu=darkNode("div","fmenu");wrap.appendChild(menu);
     var modLine=modifierLine(mod);if(modLine)darkText(wrap,"p","dark-mod",modLine);
-    var round=darkText(wrap,"p","dark-kicker","Round 1 of 5"),tell=darkNode("div","dark-tell");wrap.appendChild(tell);
-    var grid=darkNode("div","dark-moves");wrap.appendChild(grid);var result=darkText(wrap,"p","dark-round-result","");
-    function draw(){youHP.textContent="YOU "+Math.max(0,Math.ceil(engine.state.you));foeHP.textContent="DARK "+dname().toUpperCase()+" "+Math.max(0,Math.ceil(engine.state.dark));youBar.style.width=Math.max(0,engine.state.you)+"%";foeBar.style.width=Math.max(0,engine.state.dark)+"%";}
+    if(!state.hasBattled){darkText(wrap,"p","dark-help",state.noTimer?"Before each round it tells you what it's about to do. It doesn't always tell the truth. What it actually does leans toward how you answered.":"Before each round it tells you what it's about to do. It doesn't always tell the truth. What it actually does leans toward what you did under the clock.");state.hasBattled=true;saveLocal();}
+    var still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function hurt(n){if(still)return;n.classList.add("hurt");setTimeout(function(){n.classList.remove("hurt");},520);}
+    function say(lines,done){var k=0;(function nx(){if(k>=lines.length){done();return;}dlg.textContent=lines[k++];setTimeout(nx,still?400:1150);})();}
     var completed=false;
-    function finishBattle(){if(completed)return;completed=true;state.battle={result:engine.state.result,rounds:engine.state.rounds};track("battle",engine.state.result==="WIN"?"win":"loss");setStage(engine.state.result==="WIN"?"win":"loss");}
-    function next(){if(engine.state.result){finishBattle();return;}
-      round.textContent="Round "+(engine.state.rounds.length+1)+" of 5";result.textContent="";
-      var shown=engine.nextTell(),cue=DARK_SPEC.tells[nature][shown];tell.innerHTML="";arena.dataset.tell=shown;tell.setAttribute("aria-live","polite");
-      darkText(tell,"b",null,shown);darkText(tell,"p",null,cue.cue);tell.dataset.tell=shown;
-      grid.innerHTML="";
-      DarkBattle.MOVES.forEach(function(move){var m=DARK_SPEC.moves[move],counter=Object.keys(DarkBattle.RESULT[move]).filter(function(t){return DarkBattle.RESULT[move][t]==="W";})[0],loser=Object.keys(DarkBattle.RESULT[move]).filter(function(t){return DarkBattle.RESULT[move][t]==="L";})[0];
-        var b=darkNode("button","dark-move");b.type="button";
-        b.appendChild(darkNode("b",null,m.names[nature]));b.appendChild(darkNode("span",null,m.card));
-        b.appendChild(darkNode("small",null,"Beats "+counter+" · Loses to "+loser));grid.appendChild(b);
-        b.addEventListener("click",function(){var row=engine.play(move),mn=m.names[nature],actual=DARK_SPEC.moves[DarkBattle.COUNTER[row.action]].names[nature];
-          grid.innerHTML="";result.textContent=row.res==="W"?mn+" beats "+row.action.charAt(0)+row.action.slice(1).toLowerCase()+".":row.res==="L"?row.action.charAt(0)+row.action.slice(1).toLowerCase()+" beats "+mn+".":"Trade.";
-          draw();if(engine.state.result){var done=darkButton(wrap,"Continue",finishBattle);done.classList.add("dark-continue");}
-          else darkButton(grid,"Continue",next,"btn");});});}
-    draw();next();
+    function finishBattle(){if(completed)return;completed=true;state.battle={result:engine.state.result,rounds:engine.state.rounds};
+      track("battle",engine.state.result==="WIN"?"win":"loss");setStage(engine.state.result==="WIN"?"win":"loss");}
+    function round(){
+      if(engine.state.result){menu.innerHTML="";var c=darkButton(menu,"Continue",finishBattle);c.classList.add("dark-continue");return;}
+      var shown=engine.nextTell();fight.dataset.tell=shown;
+      dlg.textContent=FOE+": "+DARK_SPEC.tells[nature][shown].cue;
+      menu.innerHTML="";var lab=darkText(menu,"div","fmlab","ROUND "+(engine.state.rounds.length+1)+" OF 5");
+      var grid=darkNode("div","fmgrid");menu.appendChild(grid);
+      DarkBattle.MOVES.forEach(function(move,ix){var m=DARK_SPEC.moves[move],b=darkNode("button","fmove dark-move");b.type="button";
+        b.appendChild(darkNode("span","k",String.fromCharCode(65+ix)));var t=darkNode("span",null,m.names[nature]);b.appendChild(t);
+        b.appendChild(darkNode("small",null,m.card));grid.appendChild(b);
+        b.addEventListener("click",function(){Array.prototype.forEach.call(grid.children,function(n){n.disabled=true;n.classList.toggle("chosen",n===b);});
+          var row=engine.play(move),lines=[name.toUpperCase()+" used "+m.names[nature].toUpperCase()+"!"];
+          if(row.shown!==row.action) lines.push("It was bluffing. "+DARK_SPEC.tells[nature][row.action].cue);
+          if(row.res==="W") lines.push(m.names[nature]+" gets through.");
+          else if(row.res==="L") lines.push(SIG?FOE+" hits you with "+SIG+".":FOE+" gets through.");
+          else lines.push("Neither gives ground.");
+          say(lines,function(){ if(row.res==="W")hurt(fm); else if(row.res==="L")hurt(ym); draw(); setTimeout(round,still?100:700); });});});
+    }
+    draw();dlg.textContent=FOE+" blocks the way.";setTimeout(round,still?100:1200);
   }
   function summary(b){return darkSummary(b,nature);}
   function ending(win,b){var wrap=darkNode("section","dark-ending dark-screen "+(win?"dark-win":"dark-loss"));host.appendChild(wrap);
+    if(win){var sky=darkNode("div","rocket-sky");var duo=document.createElement("img");duo.className="rocket-duo flying";duo.src=ROCKET_DUO;duo.alt="Team Rocket";
+      sky.appendChild(duo);sky.appendChild(darkNode("span","rocket-twinkle","✦"));wrap.appendChild(sky);}
     var tube=darkNode("div","dark-tube");wrap.appendChild(tube);if(win){darkSprite(res,tube,"dark-return-sprite");darkNormal(res,tube);}else darkSprite(res,tube);
     darkText(wrap,"h1",null,win?"You beat "+title+".":title+" stays with Team Rocket.");
     darkText(wrap,"p",null,win?DARK_SPEC.winLines[nature].replace("{P}",name):"It's still yours. They're just holding it.");
@@ -4202,8 +4307,8 @@ function darkChapter(host,res){
     if(win){darkText(wrap,"p","dark-dialogue","That is not how this was supposed to go.");darkText(wrap,"p","dark-dialogue","Let them keep it. It comes back the next time they're rushed.");}
     else darkText(wrap,"p","dark-dialogue","We'll take good care of it. Mostly.");
     var actions=darkNode("div","dark-actions");wrap.appendChild(actions);
-    darkButton(actions,"Fight again",function(){state.battle=null;setStage("battle");});
-    darkButton(actions,"Back to my reading",darkReturn,"ghost");
+    darkButton(actions,"See your shadow report",function(){setStage("report");});
+    darkButton(actions,"Fight again",function(){state.battle=null;setStage("battle");},"ghost");
   }
   render();
 }
@@ -4211,7 +4316,22 @@ function darkChapter(host,res){
 // Test hook: only with ?audit=1 in the URL. Lets the PDF proof drive every species without the UI.
 if(/[?&]audit=1(&|$)/.test(location.search)) window.__PT={
   buildRun:buildRun, reduce:reduce, natureOrder:natureOrder, evaluate:evaluate, buildPDFPages:buildPDFPages,
-  setDark:function(d){darkState=d;}, last:function(){return last;}, audit:function(a){PDF_AUDIT=a;}, MON:MON, spec:function(){return DARK_SPEC;}};
+  setDark:function(d){darkState=d;}, last:function(){return last;}, audit:function(a){PDF_AUDIT=a;}, MON:MON, spec:function(){return DARK_SPEC;},
+  // which families can ever be the second Pokémon (any nature target, any stage pool, any trait answers)
+  reach:function(mode){var hit={},all={},nP=0;
+    for(var t in FAMILY_POOLS)FAMILY_POOLS[t].forEach(function(pl){(pl||[]).forEach(function(f){all[f.id]=f;});});
+    for(var ph=0;ph<5;ph++){var pools=0;PHASE_TYPES[ph].forEach(function(t){pools=Math.max(pools,(FAMILY_POOLS[t]||[]).length);});
+      for(var pool=0;pool<pools;pool++){var seen={},fams=[];PHASE_TYPES[ph].forEach(function(t){((FAMILY_POOLS[t]||[])[pool]||[]).forEach(function(f){if(!seen[f.id]){seen[f.id]=1;fams.push(f);}});});
+        if(!fams.length)continue;
+        for(var code=0;code<Math.pow(4,TRAIT_COUNT);code++){var prof=[],c=code;for(var a=0;a<TRAIT_COUNT;a++){prof.push(c%4);c=Math.floor(c/4);}nP++;
+          var r=fams.map(function(f){var tg=TRAITS[f.id],d=0,w=0,s=0;for(var a=0;a<TRAIT_COUNT;a++){var sil=!!(tg[4]&(1<<a)),g=sil?1:Math.abs(prof[a]-tg[a]);d+=g;w=Math.max(w,g);if(sil)s++;}return {f:f,d:d,w:w,s:s};})
+            .sort(function(x,y){return (x.d-y.d)||(x.w-y.w)||(x.s-y.s);});
+          // best, plus runner-up (when your own family is the best it's excluded)
+          var eq=mode==='strict'?function(x,y){return x.d===y.d&&x.w===y.w&&x.s===y.s;}:function(x,y){return x.d===y.d;}; /* default = the live rule */var b0=r[0],ties=r.filter(function(x){return eq(x,b0);});ties.forEach(function(x){hit[x.f.id]=1;});
+          if(ties.length===1&&r[1]){var b1=r[1];r.filter(function(x){return eq(x,b1);}).forEach(function(x){hit[x.f.id]=2;});}
+        }}}
+    var missing=Object.keys(all).filter(function(id){return !hit[id];}).map(function(id){var f=all[id];return id+":"+f.mon.map(function(m){return m.n;}).join("/");});
+    return {families:Object.keys(all).length,reached:Object.keys(hit).length,missing:missing};}};
 if(typeof module!=="undefined"&&module.exports){
   module.exports={buildRun:buildRun,evaluate:evaluate,reduce:reduce,matchups:matchups,
     MON:MON,ALLTYPES:ALLTYPES,PHASE_TYPES:PHASE_TYPES,PHASE_EN:PHASE_EN,EFF:EFF};
