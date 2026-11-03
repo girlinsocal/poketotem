@@ -487,6 +487,7 @@ body:not([data-view]) .mast-t{visibility:hidden}
 .actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:14px}
 .lockbtn{opacity:.55}
 .lockbtn::after{content:" \25AA";color:var(--gold)}
+.gate-done{font-family:"Silkscreen",monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:center;color:var(--sage);margin:0 0 18px}
 .ok{font-family:"Silkscreen",monospace;font-size:8.5px;letter-spacing:.02em;text-transform:uppercase;color:var(--sage);opacity:0;transition:opacity .2s}
 .ok.on{opacity:1}
 #prev{display:none;margin:16px 2px 0;max-width:240px;border:0;image-rendering:pixelated;
@@ -2833,7 +2834,7 @@ function render(){
   drawBar(); el("stem").textContent=q.s;
   var hint=el("trialhint");
   hint.hidden=step!==0&&step!==NAT_COUNT;
-  if(!hint.hidden)hint.textContent=step===0?TRIAL_INTRO:TYPE_TRANSITION;
+  if(!hint.hidden)hint.textContent=step===0?"":TYPE_TRANSITION;
   var box=el("answers"); box.innerHTML="";
 
   if(q.k==="land"){                                   // five worlds, one per nature
@@ -2859,11 +2860,11 @@ function render(){
 
   var list=document.createElement("div"); list.className="opts";
   var order=(q.k==="choice"||q.k==="trait")?q.q.order:q.opts.map(function(_,i){return i;});
-  order.forEach(function(ix){
+  order.forEach(function(ix,slot){
     var tx=q.k==="typ"?q.opts[ix][0]:(q.k==="choice"||q.k==="trait")?q.opts[ix]:q.opts[ix].t;
     var b=document.createElement("button"); b.className="opt"+(ans[step]===ix?" sel":"");
     b.id="opt-"+step+"-"+ix; b.type="button";
-    var k=document.createElement("span"); k.className="k"; k.textContent=String.fromCharCode(65+ix);
+    var k=document.createElement("span"); k.className="k"; k.textContent=String.fromCharCode(65+slot);
     var t=document.createElement("span"); t.textContent=tx;
     b.appendChild(k); b.appendChild(t); b.appendChild(glyph("right",9));
     b.addEventListener("click",function(){answer(ix);});
@@ -2898,11 +2899,10 @@ document.addEventListener("keydown",function(e){
   if(el("v-trial").hidden) return;
   if(e.key==="Backspace"||e.key==="ArrowLeft"){ if(step>0){e.preventDefault();step--;render();} return; }
   var i=-1;
-  if(/^[a-hA-H]$/.test(e.key)) i=e.key.toUpperCase().charCodeAt(0)-65;
-  else if(/^[1-8]$/.test(e.key)){
-    var slot=+e.key-1,q=run[step];
-    i=(q.k==="choice"||q.k==="trait")?q.q.order[slot]:slot;
-  }
+  var slot=-1;
+  if(/^[a-hA-H]$/.test(e.key)) slot=e.key.toUpperCase().charCodeAt(0)-65;   // letters follow screen position
+  else if(/^[1-8]$/.test(e.key)) slot=+e.key-1;
+  if(slot>=0){ var q=run[step]; i=(q.k==="choice"||q.k==="trait")?q.q.order[slot]:slot; if(i==null) i=-1; }
   if(i>=0&&i<run[step].opts.length){ e.preventDefault(); answer(i); }
 });
 function begin(){
@@ -3078,7 +3078,7 @@ function finish(res,restored){
   last=res; var m=res.mon, disp=m.n.toUpperCase().replace(/-/g," ");
   show("result");
   paint(el("bg"),m);
-  el("hp-n").textContent=disp; el("hp-lv").textContent=STG[m.s];
+  el("hp-n").textContent=disp; el("hp-lv").textContent=formOf(m).toUpperCase();
   var gg=el("hp-bar"); gg.innerHTML=""; for(var hb=0;hb<12;hb++){gg.appendChild(document.createElement("i"));}
   typeOut(el("dlg"),fill(UI.result.appeared,{NAME:disp}));
   setSp(el("fig"),m.i,112);
@@ -3223,7 +3223,7 @@ function presGrid(host,res){
     g.appendChild(d);});
   host.appendChild(g);
   var note=document.createElement("p"); note.className="gnote"; note.style.margin="2px 2px 0";
-  note.textContent=UI.actions.presNote;
+  note.textContent=""; note.hidden=true;
   host.appendChild(note);
 }
 function secHead(host,markName,title){
@@ -3356,6 +3356,8 @@ function chapterBody(id,res,host){
 }
 
 function openChapter(ch,res){
+  var mi=MENU.map(function(it){return it[1];}).indexOf(ch.id), mn=el("menu");
+  if(mi>=0&&mn) Array.prototype.forEach.call(mn.children,function(c,j){c.classList.toggle("on",j===mi);});
   el("index").hidden=true; el("reader").hidden=false;
   el("r-eb").textContent=fill(ch.eyebrow,{NAME:pretty(res.mon.n).toUpperCase()});
   var body=el("r-body"); body.innerHTML="";
@@ -3481,6 +3483,8 @@ el("gform").addEventListener("submit",function(e){
     el("dlg").textContent=UI.gate.opened;
     var sh=CHAPTERS.filter(function(c){return c.id==="ch-shadow";})[0];
     if(sh) openChapter(sh,last);
+    var done=document.createElement("p"); done.className="gate-done"; done.textContent=UI.gate.opened;   // say it where they land
+    var rb=el("r-body"); rb.insertBefore(done,rb.firstChild);
   }).catch(function(){ /* the gate stays; attachEmail has shown why */ });
 });
 
@@ -3609,12 +3613,11 @@ el("ig").addEventListener("click",function(){
 /* ---- share the test, never the result ---- */
 el("cp").addEventListener("click",function(){
   var url=location.href.split("#")[0];
-  var txt=UI.actions.shareText;
-  if(navigator.share){ navigator.share({title:"POKETOTEM",text:txt,url:url})
+  if(navigator.share){ navigator.share({title:"POKETOTEM",url:url})
     .then(function(){ track("shared","native"); },function(){}); return; }
   var ok=function(){ flash(UI.actions.copied); track("shared","link_copied"); };
   var bad=function(){ flash(fill(UI.actions.copyFail,{URL:url}),6000); };
-  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt+"\n"+url).then(ok,bad);
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok,bad);
   else bad();
 });
 function flash(t,ms){var o=el("ok");o.textContent=t;o.classList.add("on");
